@@ -65,7 +65,8 @@ template <typename F, typename... Args>
 requires Parser_constructor<F, Args...>
 using Parser_constructor_value_t = std::invoke_result_t<F, Args...>;
 
-constexpr auto item = [](std::string_view input) -> Parsed_t<char>
+inline constexpr auto
+item = [](std::string_view input) -> Parsed_t<char>
 {
     if (input.empty()) {
         return {};
@@ -125,7 +126,7 @@ static_assert(
     "chain must be associative"
 );
 
-constexpr auto papply = []<typename F, typename... Args>(F&& f, Args&&... args)
+inline constexpr auto papply = []<typename F, typename... Args>(F&& f, Args&&... args)
 {
     if constexpr (std::invocable<F, Args...>) {
         return std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
@@ -134,19 +135,23 @@ constexpr auto papply = []<typename F, typename... Args>(F&& f, Args&&... args)
     }
 };
 
+template <Parser P, Parser Q>
 constexpr Parser auto
-operator^(Parser auto p, Parser auto q)
+operator^(P p, Q q)
 {
-    return chain(
-        p,
-        [q](auto const& f)
-        {
-            return chain(
-                q,
-                [f](auto const& x){ return unit(papply(f, x)); }
-            );
+    using Result_t = std::invoke_result_t<decltype(papply), Parser_value_t<P>, Parser_value_t<Q>>;
+    return [=](std::string_view input) -> Parsed_t<Result_t>
+    {
+        if (auto const& pr = std::invoke(p, input)) {
+            if (auto const& qr = std::invoke(q, pr->second)) {
+                return {{papply(pr->first, qr->first), qr->second}};
+            } else {
+                return {};
+            }
+        } else {
+            return {};
         }
-    );
+    };
 }
 
 template <typename F, Parser... Ps>
@@ -165,11 +170,13 @@ class reduce_many
 
 public:
 
+    constexpr
     reduce_many(T const& thing, P const& p, F const& fn)
         : init{thing}, parser{p}, func{fn}
     {}
 
-    auto operator()(std::string_view input) const -> Parsed_t<T>
+    constexpr auto
+    operator()(std::string_view input) const -> Parsed_t<T>
     {
         return choice(
             chain(
@@ -186,7 +193,8 @@ public:
 
 template <Parser P>
 requires std::same_as<Parser_value_t<P>, char>
-Parser auto many(P parser)
+constexpr Parser auto
+many(P parser)
 {
     return reduce_many(
         std::string{},
@@ -197,24 +205,21 @@ Parser auto many(P parser)
 
 template <Parser P>
 requires std::same_as<Parser_value_t<P>, char>
-Parser auto some(P parser)
+constexpr Parser auto
+some(P parser)
 {
-    return chain(
+    return sequence(
+        [](char ch, std::string const& st){ return std::string(1, ch) + st; },
         parser,
-        [=](char ch)
-        {
-            return chain(
-                many(parser),
-                [=](std::string const& st){ return unit(std::string(1, ch) + st); }
-            );
-        }
+        many(parser)
     );
 }
 
 // Making choices
 
 template <typename T>
-auto empty = [](std::string_view) -> Parsed_t<T>
+inline constexpr auto
+empty = [](std::string_view) -> Parsed_t<T>
 {
     return {};
 };
@@ -322,32 +327,30 @@ public:
 
     auto operator()(std::string_view input) const -> Parsed_t<std::string>
     {
-        if (match.empty()) {
-            return unit(std::string{})(input);
+        if (input.starts_with(match)) {
+            return {{std::string{match}, {input.cbegin() + match.size(), input.cend()}}};
         } else {
-            return chain(
-                symbol(match[0]),
-                [this](auto){ return str{match.substr(1)}; },
-                [this](auto){ return unit(std::string{match}); }
-            )(input);
+            return {};
         }
     }
 };
 
 //  Handling spacing
 
-inline Parser auto space = satisfy(::isspace);
+inline constexpr Parser auto space = satisfy(::isspace);
 
 inline Parser auto whitespace = many(space);
 
 inline Parser auto eol = choice(str{"\r\n"}, str{"\r"}, str{"\n"});
 
-inline Parser auto separator = choice(eol, chain(space, [](auto ch){ return unit(std::string(1, ch)); }));
+inline Parser auto separator = choice(eol, sequence([](auto ch){ return std::string(1, ch); }, space));
 
-Parser auto token(Parser auto parser)
+constexpr Parser auto
+token(Parser auto parser)
 {
-    return chain(
+    return sequence(
+        [](auto const& thing, auto){ return thing; },
         skip(whitespace, parser),
-        [](auto const& thing){ return skip(whitespace, unit(thing)); }
+        whitespace
     );
 }
