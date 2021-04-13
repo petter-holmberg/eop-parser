@@ -35,6 +35,8 @@ For more information, please refer to <http://unlicense.org>
 
 Parser auto character = satisfy([](char x){ return x != '\r' && x != '\n'; });
 
+extern std::vector<std::string> template_names;
+
 template <typename T>
 auto appended_vector(std::vector<T> x, T const& y) -> std::vector<T>
 {
@@ -74,6 +76,8 @@ auto eop_boolean(std::string_view input) -> Parsed_t<Eop>;
 auto eop_integer(std::string_view input) -> Parsed_t<Eop>;
 
 auto eop_real(std::string_view input) -> Parsed_t<Eop>;
+
+auto eop_comment(std::string_view input) -> Parsed_t<Eop>;
 
 auto eop_basic_type(std::string_view input) -> Parsed_t<Eop>;
 

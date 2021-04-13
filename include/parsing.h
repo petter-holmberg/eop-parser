@@ -57,13 +57,13 @@ template <Parser P>
 using Parser_value_t = typename Parser_result_t<P>::value_type::first_type;
 
 template <typename F, typename... Args>
-concept Parser_constructor =
+concept Parser_combinator =
     std::regular_invocable<F, Args...> &&
     Parser<std::invoke_result_t<F, Args...>>;
 
 template <typename F, typename... Args>
-requires Parser_constructor<F, Args...>
-using Parser_constructor_value_t = std::invoke_result_t<F, Args...>;
+requires Parser_combinator<F, Args...>
+using Parser_combinator_value_t = std::invoke_result_t<F, Args...>;
 
 inline constexpr auto
 item = [](std::string_view input) -> Parsed_t<char>
@@ -87,11 +87,11 @@ unit(T const& thing)
     };
 }
 
-template <Parser P, Parser_constructor<Parser_value_t<P>> F>
+template <Parser P, Parser_combinator<Parser_value_t<P>> F>
 constexpr Parser auto
 operator&(P parser, F func)
 {
-    using Parser_t = Parser_constructor_value_t<F, Parser_value_t<P>>;
+    using Parser_t = Parser_combinator_value_t<F, Parser_value_t<P>>;
     return [=](std::string_view input) -> Parser_result_t<Parser_t>
     {
         if (auto const& result = std::invoke(parser, input)) {

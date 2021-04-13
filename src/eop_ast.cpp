@@ -95,6 +95,11 @@ string fmt(Literal const& x)
     return fmt(x.value);
 }
 
+string json(Literal const& x)
+{
+    return json_eop("literal", json(x.value));
+}
+
 Eop prune(Literal const& x, Eval& eval)
 {
     auto node{prune(x.value, eval)};
@@ -107,11 +112,6 @@ Eop prune(Literal const& x, Eval& eval)
     } else {
         return node;
     }
-}
-
-string json(Literal const& x)
-{
-    return json_eop("literal", json(x.value));
 }
 
 string fmt(Boolean const& x)
@@ -151,15 +151,15 @@ string fmt(Real const& x)
     return std::to_string(x.value);
 }
 
+string json(Real const& x)
+{
+    return json_eop("real", fmt(x));
+}
+
 Eop prune(Real const& x, Eval& eval)
 {
     eval.real_literal = x.value;
     return Eop{x};
-}
-
-string json(Real const& x)
-{
-    return json_eop("real", fmt(x));
 }
 
 string fmt(Comment const& x)
@@ -826,7 +826,7 @@ Eop prune(Postfix const& x, Eval& eval)
 
 string fmt(Typename const&)
 {
-    return "&";
+    return "typename";
 }
 
 string json(Typename const&)

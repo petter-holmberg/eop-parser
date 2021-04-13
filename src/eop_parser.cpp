@@ -25,6 +25,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 */
 
+#include <algorithm>
 #include <memory>
 
 #include "eop_parser.h"
@@ -32,6 +33,8 @@ For more information, please refer to <http://unlicense.org>
 
 using std::string;
 using std::string_view;
+
+std::vector<string> template_names;
 
 /*
 Syntax Notation
@@ -64,7 +67,7 @@ An Extended Backus-Naur Form designed by Niklaus Wirth is used. Wirth
 // identifier = (letter | "_") {letter | "_" | digit}.
 auto eop_identifier(string_view input) -> Parsed_t<Eop>
 {
-   return pass_empty(
+    return pass_empty(
         choice(
             str{"case"},
             str{"const"},
@@ -421,7 +424,22 @@ auto eop_primary(string_view input) -> Parsed_t<Eop>
                 [](auto const& x){ return std::pair{x, false}; },
                 eop_typename
             ),
-            // *eop_template_name, // NOTE: Template parsing requires a matching template definition for instantiation, cannot simply parse here!
+            sequence( // See Templates (2.)
+                [](auto const& x){ return std::pair{x, false}; },
+                [](string_view input) -> Parsed_t<Eop>
+                {
+                    auto const pos = std::find_if(
+                        std::cbegin(template_names),
+                        std::cend(template_names),
+                        [input](auto const& st){ return input.starts_with(st.c_str()); }
+                    );
+                    if (pos != std::cend(template_names)) {
+                       return {{Eop{Identifier{*pos}}, input.substr(pos->size())}};
+                    } else {
+                        return {};
+                    }
+                }
+            ),
             sequence(
                 [](auto const& x){ return std::pair{x, false}; },
                 eop_basic_type
@@ -500,6 +518,7 @@ auto eop_identifier_list(string_view input) -> Parsed_t<Eop>
 
 /*
 Structures
+
 A structure is a type consisting of a heterogeneous tuple of named, typed
 objects called data members. Each data member is either an individual
 object or an array of constant size. In addition, the structure may include
@@ -1285,6 +1304,7 @@ auto eop_template_name(string_view input) -> Parsed_t<Eop>
     return sequence(
         [](auto const& name, auto const& arguments)
         {
+            template_names.emplace_back(fmt(name)); // See Templates (2.)
             return Eop{Template_name{name, arguments}};
         },
         choice(
