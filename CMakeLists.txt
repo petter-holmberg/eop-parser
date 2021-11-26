@@ -4,7 +4,7 @@ project (EopParser)
 
 include_directories ("${PROJECT_SOURCE_DIR}/include")
 set (CMAKE_BUILD_TYPE Release)
-set (CMAKE_CXX_COMPILER clang++-11)
+set (CMAKE_CXX_COMPILER clang++)
 
 add_executable (eop_parser src/main.cpp src/eop_parser.cpp src/eop_ast.cpp)
 target_compile_options (

@@ -60,7 +60,7 @@ Parser auto op_pair(std::string const& op_str, Parser auto operand, auto result)
 {
     return sequence(
         [result](auto, auto const& rel){ return std::pair{result, rel}; },
-        token(str{op_str}),
+        token(str(op_str)),
         operand
     );
 }

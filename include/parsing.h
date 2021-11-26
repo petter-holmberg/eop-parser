@@ -106,7 +106,7 @@ constexpr Parser auto
 chain(Parser auto parser, auto... funcs)
 {
     if constexpr (std::is_pointer_v<decltype(parser)>) {
-        return ([parser](auto input){ return parser(input); } & ... & funcs);
+        return ([parser](auto input){ return std::invoke(parser, input); } & ... & funcs);
     } else {
         return (parser & ... & funcs);
     }
@@ -155,7 +155,7 @@ operator^(P p, Q q)
 }
 
 template <typename F, Parser... Ps>
-requires std::invocable<F, Parser_value_t<Ps>...>
+requires std::regular_invocable<F, Parser_value_t<Ps>...>
 constexpr Parser auto
 sequence(F func, Ps... parsers)
 {
@@ -243,7 +243,7 @@ constexpr Parser auto
 choice(Parser auto parser, Parser auto... parsers)
 {
     if constexpr (std::is_pointer_v<decltype(parser)>) {
-        return ([parser](auto input){ return parser(input); } | ... | parsers);
+        return ([parser](auto input){ return std::invoke(parser, input); } | ... | parsers);
     } else {
         return (parser | ... | parsers);
     }
@@ -285,7 +285,7 @@ satisfy(Pr pred, P parser = item)
         parser,
         [pred](auto const& th) -> Parser auto
         {
-            return [pred, &th](std::string_view input) -> Parsed_t<Parser_value_t<P>>
+            return [pred, th](std::string_view input) -> Parsed_t<Parser_value_t<P>>
             {
                 if (std::invoke(pred, th)) return {{th, input}}; else return {};
             };
@@ -310,7 +310,16 @@ constexpr Parser auto
 digit = satisfy([](char x){ return x >= '0' && x <= '9'; });
 
 constexpr Parser auto
-letter = satisfy([](char x){ return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'); });
+lower = satisfy([](char x){ return x >= 'a' && x <= 'z'; });
+
+constexpr Parser auto
+upper = satisfy([](char x){ return x >= 'A' && x <= 'Z'; });
+
+constexpr Parser auto
+letter = choice(lower, upper);
+
+constexpr Parser auto
+alphanum = choice(letter, digit);
 
 constexpr Parser auto
 symbol(char x)
@@ -318,22 +327,21 @@ symbol(char x)
     return satisfy([x](char y){ return x == y; });
 }
 
-class str
+constexpr Parser auto
+str(std::string_view match)
 {
-    std::string_view match;
-public:
-
-    explicit str(std::string_view m) : match{m} {}
-
-    auto operator()(std::string_view input) const -> Parsed_t<std::string>
+    return [match](std::string_view input) -> Parsed_t<std::string>
     {
         if (input.starts_with(match)) {
-            return {{std::string{match}, {input.cbegin() + match.size(), input.cend()}}};
+            return {{
+                std::string{match}, {input.begin() + match.size(), input.end()}
+            }};
         } else {
             return {};
         }
-    }
-};
+    };
+}
+static_assert(Parser_combinator<decltype(str), std::string_view>);
 
 //  Handling spacing
 
@@ -341,7 +349,7 @@ inline constexpr Parser auto space = satisfy(::isspace);
 
 inline Parser auto whitespace = many(space);
 
-inline Parser auto eol = choice(str{"\r\n"}, str{"\r"}, str{"\n"});
+inline Parser auto eol = choice(str("\r\n"), str("\r"), str("\n"));
 
 inline Parser auto separator = choice(eol, sequence([](auto ch){ return std::string(1, ch); }, space));
 

@@ -15,6 +15,6 @@ contents of the tree can be printed as formatted source code or as a JSON
 object, and the tree can be pruned of redundant nodes.
 
 For simplicity, no expansion of template instantiations is performed if the
-parsers encounters a name that would correspond to a prior template definition.
+parsers encounter a name that would correspond to a prior template definition.
 A complete parser for the language would need to handle this case.
 Comments are also not parsed. They can be removed in a pre-parsing phase.

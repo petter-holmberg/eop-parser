@@ -69,24 +69,24 @@ auto eop_identifier(string_view input) -> Parsed_t<Eop>
 {
     return pass_empty(
         choice(
-            str{"case"},
-            str{"const"},
-            str{"do"},
-            str{"else"},
-            str{"enum"},
-            str{"false"},
-            str{"goto"},
-            str{"if"},
-            str{"operator"},
-            str{"requires"},
-            str{"return"},
-            str{"struct"},
-            str{"switch"},
-            str{"template"},
-            str{"true"},
-            str{"typedef"},
-            str{"typename"},
-            str{"while"}
+            str("case"),
+            str("const"),
+            str("do"),
+            str("else"),
+            str("enum"),
+            str("false"),
+            str("goto"),
+            str("if"),
+            str("operator"),
+            str("requires"),
+            str("return"),
+            str("struct"),
+            str("switch"),
+            str("template"),
+            str("true"),
+            str("typedef"),
+            str("typename"),
+            str("while")
         ),
         sequence(
             [](auto const& ch, auto const& str)
@@ -123,7 +123,7 @@ auto eop_boolean(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Boolean{str == "true"}};
         },
-        choice(str{"false"}, str{"true"})
+        choice(str("false"), str("true"))
     )(input);
 }
 
@@ -175,7 +175,7 @@ auto eop_comment(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Comment{str}};
         },
-        str{"//"},
+        str("//"),
         many(character),
         eol
     )(input);
@@ -192,9 +192,9 @@ integer values, and double has IEEE 64-bit floating-point values:
 auto eop_basic_type(string_view input) -> Parsed_t<Eop>
 {
     return choice(
-        sequence([](auto const&){ return Eop{Basic_type{Basic_type::Type::bool_v}}; }, str{"bool"}),
-        sequence([](auto const&){ return Eop{Basic_type{Basic_type::Type::int_v}}; }, str{"int"}),
-        sequence([](auto const&){ return Eop{Basic_type{Basic_type::Type::double_v}}; }, str{"double"})
+        sequence([](auto const&){ return Eop{Basic_type{Basic_type::Type::bool_v}}; }, str("bool")),
+        sequence([](auto const&){ return Eop{Basic_type{Basic_type::Type::int_v}}; }, str("int")),
+        sequence([](auto const&){ return Eop{Basic_type{Basic_type::Type::double_v}}; }, str("double"))
     )(input);
 }
 
@@ -243,7 +243,7 @@ auto eop_expression(string_view input) -> Parsed_t<Eop>
             return Eop{Expression{conjunction, conjunctions}};
         },
         eop_conjunction,
-        repeat(chain(token(str{"||"}), [](auto){ return eop_conjunction; }))
+        repeat(chain(token(str("||")), [](auto){ return eop_conjunction; }))
     )(input);
 }
 
@@ -256,7 +256,7 @@ auto eop_conjunction(string_view input) -> Parsed_t<Eop>
             return Eop{Conjunction{expression, expressions}};
         },
         eop_equality,
-        repeat(chain(token(str{"&&"}), [](auto){ return eop_equality; }))
+        repeat(chain(token(str("&&")), [](auto){ return eop_equality; }))
     )(input);
 }
 
@@ -359,7 +359,7 @@ auto eop_ref(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Ref{}};
         },
-        pass_empty(token(str{"&&"}), token(symbol('&')))
+        pass_empty(token(str("&&")), token(symbol('&')))
     )(input);
 }
 
@@ -407,7 +407,7 @@ auto eop_typename(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Typename{}};
         },
-        str{"typename"}
+        str("typename")
     )(input);
 }
 
@@ -426,15 +426,15 @@ auto eop_primary(string_view input) -> Parsed_t<Eop>
             ),
             sequence( // See Templates (2.)
                 [](auto const& x){ return std::pair{x, false}; },
-                [](string_view input) -> Parsed_t<Eop>
+                [](string_view inp) -> Parsed_t<Eop>
                 {
                     auto const pos = std::find_if(
                         std::cbegin(template_names),
                         std::cend(template_names),
-                        [input](auto const& st){ return input.starts_with(st.c_str()); }
+                        [inp](auto const& st){ return inp.starts_with(st.c_str()); }
                     );
                     if (pos != std::cend(template_names)) {
-                       return {{Eop{Identifier{*pos}}, input.substr(pos->size())}};
+                       return {{Eop{Identifier{*pos}}, inp.substr(pos->size())}};
                     } else {
                         return {};
                     }
@@ -492,7 +492,7 @@ auto eop_enumeration(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Enumeration{name, values}};
         },
-        str{"enum"},
+        str("enum"),
         separator,
         token(eop_identifier),
         symbol('{'),
@@ -524,7 +524,7 @@ objects called data members. Each data member is either an individual
 object or an array of constant size. In addition, the structure may include
 definitions of constructors, a destructor, member operators (assignment,
 application, and indexing), and local typedefs. A structure with an apply
-operator member is known as a function  object. Omitting  the  structure
+operator member is known as a function  object. Omitting the structure
 body allows a forward declaration.
 
 A constructor taking a constant reference to the type of the structure is a
@@ -552,7 +552,7 @@ auto eop_structure(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Structure{name, body}};
         },
-        str{"struct"},
+        str("struct"),
         separator,
         token(eop_structure_name),
         maybe(eop_structure_body),
@@ -677,9 +677,9 @@ auto eop_assign(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Assign{parameter, body}};
         },
-        str{"void"},
+        str("void"),
         separator,
-        token(str{"operator"}),
+        token(str("operator")),
         symbol('='),
         token(symbol('(')),
         eop_parameter,
@@ -697,7 +697,7 @@ auto eop_apply(string_view input) -> Parsed_t<Eop>
         },
         eop_expression,
         separator,
-        token(str{"operator"}),
+        token(str("operator")),
         symbol('('),
         token(symbol(')')),
         symbol('('),
@@ -717,7 +717,7 @@ auto eop_index(string_view input) -> Parsed_t<Eop>
         },
         eop_expression,
         separator,
-        token(str{"operator"}),
+        token(str("operator")),
         symbol('['),
         token(symbol(']')),
         symbol('('),
@@ -780,7 +780,7 @@ auto eop_procedure(string_view input) -> Parsed_t<Eop>
         },
         choice(
             sequence([](auto const& expression){ return std::optional<Eop>{expression}; }, eop_expression),
-            sequence([](auto const&){ return std::optional<Eop>{}; }, str{"void"})
+            sequence([](auto const&){ return std::optional<Eop>{}; }, str("void"))
         ),
         separator,
         token(eop_procedure_name),
@@ -811,15 +811,15 @@ auto eop_operator(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Operator{value}};
         },
-        str{"operator"},
+        str("operator"),
         choice(
-            sequence([](auto){ return Operator::Type::eq_v; }, str{"=="}),
-            sequence([](auto){ return Operator::Type::lt_v; }, str{"<"}),
-            sequence([](auto){ return Operator::Type::plus_v; }, str{"+"}),
-            sequence([](auto){ return Operator::Type::minus_v; }, str{"-"}),
-            sequence([](auto){ return Operator::Type::mul_v; }, str{"*"}),
-            sequence([](auto){ return Operator::Type::quot_v; }, str{"/"}),
-            sequence([](auto){ return Operator::Type::rem_v; }, str{"%"})
+            sequence([](auto){ return Operator::Type::eq_v; }, str("==")),
+            sequence([](auto){ return Operator::Type::lt_v; }, str("<")),
+            sequence([](auto){ return Operator::Type::plus_v; }, str("+")),
+            sequence([](auto){ return Operator::Type::minus_v; }, str("-")),
+            sequence([](auto){ return Operator::Type::mul_v; }, str("*")),
+            sequence([](auto){ return Operator::Type::quot_v; }, str("/")),
+            sequence([](auto){ return Operator::Type::rem_v; }, str("%"))
         )
     )(input);
 }
@@ -1026,7 +1026,7 @@ auto eop_return(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Return{value}};
         },
-        str{"return"},
+        str("return"),
         maybe(
             sequence(
                 [](auto, auto const& expression){ return expression; },
@@ -1047,7 +1047,7 @@ auto eop_conditional(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Conditional{condition, true_statement, false_statement}};
         },
-        str{"if"},
+        str("if"),
         token(symbol('(')),
         eop_expression,
         token(symbol(')')),
@@ -1055,7 +1055,7 @@ auto eop_conditional(string_view input) -> Parsed_t<Eop>
         maybe(
             sequence(
                 [](auto, auto const& statement){ return statement; },
-                token(str{"else"}),
+                token(str("else")),
                 eop_statement
             )
         )
@@ -1070,7 +1070,7 @@ auto eop_switch(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Switch{conditional, cases}};
         },
-        str{"switch"},
+        str("switch"),
         token(symbol('(')),
         eop_expression,
         token(symbol(')')),
@@ -1088,7 +1088,7 @@ auto eop_case(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Case{condition, statements}};
         },
-        str{"case"},
+        str("case"),
         separator,
         token(eop_expression),
         symbol(':'),
@@ -1110,7 +1110,7 @@ auto eop_while(string_view input) -> Parsed_t<Eop>
         {
             return Eop{While{condition, statement}};
         },
-        str{"while"},
+        str("while"),
         token(symbol('(')),
         eop_expression,
         token(symbol(')')),
@@ -1126,10 +1126,10 @@ auto eop_do(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Do{condition, statement}};
         },
-        str{"do"},
+        str("do"),
         separator,
         token(eop_statement),
-        token(str{"while"}),
+        token(str("while")),
         symbol('('),
         token(eop_expression),
         symbol(')'),
@@ -1160,7 +1160,7 @@ auto eop_break(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Break{}};
         },
-        str{"break"},
+        str("break"),
         whitespace,
         symbol(';')
     )(input);
@@ -1174,7 +1174,7 @@ auto eop_goto(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Goto{value}};
         },
-        str{"goto"},
+        str("goto"),
         separator,
         token(eop_identifier),
         symbol(';')
@@ -1189,7 +1189,7 @@ auto eop_typedef(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Typedef{type, name}};
         },
-        str{"typedef"},
+        str("typedef"),
         separator,
         token(eop_expression),
         eop_identifier,
@@ -1211,7 +1211,7 @@ given explicitly as the delimited expression list in the template_name or, for
 procedures, may be deduced from the procedure argument types.
 
 (2.) To disambiguate between the use of < and > as relations or as template name delimiters,
-once a structure_name or procedure_name is parsed as part of atemplate, it becomes a
+once a structure_name or procedure_name is parsed as part of a template, it becomes a
 terminal symbol.
 
 A template structure can be specialized, providing an alternative defini-
@@ -1248,7 +1248,7 @@ auto eop_specialization(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Specialization{name, arguments, body}};
         },
-        str{"struct"},
+        str("struct"),
         separator,
         token(eop_structure_name),
         symbol('<'),
@@ -1267,7 +1267,7 @@ auto eop_template_decl(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Template_decl{parameters, constraint}};
         },
-        str{"template"},
+        str("template"),
         token(symbol('<')),
         maybe(eop_parameter_list),
         whitespace,
@@ -1290,7 +1290,7 @@ auto eop_constraint(string_view input) -> Parsed_t<Eop>
         {
             return Eop{Constraint{Eop{value}}};
         },
-        str{"requires"},
+        str("requires"),
         token(symbol('(')),
         maybe(eop_expression),
         whitespace,
@@ -1359,7 +1359,7 @@ auto eop_declaration(string_view input) -> Parsed_t<Eop>
     )(input);
 }
 
-// declaration = procedure | structure | enum | template.
+// declaration_list = {declaration eol}.
 auto eop_declaration_list(string_view input) -> Parsed_t<Eop>
 {
     return sequence(
