@@ -1913,7 +1913,7 @@ Eop prune(Declaration const& x, Eval& eval)
 
 string fmt(Declaration_list const& x)
 {
-    return to_csv(x.value, ", ", fmt_formatter) + '\n';
+    return to_csv(x.value, "\n", fmt_formatter) + '\n';
 }
 
 string json(Declaration_list const& x)

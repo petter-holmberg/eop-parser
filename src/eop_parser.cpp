@@ -782,7 +782,7 @@ auto eop_procedure(string_view input) -> Parsed_t<Eop>
             sequence([](auto const& expression){ return std::optional<Eop>{expression}; }, eop_expression),
             sequence([](auto const&){ return std::optional<Eop>{}; }, str("void"))
         ),
-        separator,
+        maybe(separator),
         token(eop_procedure_name),
         symbol('('),
         maybe(token(eop_parameter_list)),
@@ -846,13 +846,7 @@ auto eop_parameter(string_view input) -> Parsed_t<Eop>
             return Eop{Parameter{type, name}};
         },
         eop_expression,
-        maybe(
-            sequence(
-                [](auto, auto const& name){ return name; },
-                token(separator),
-                eop_identifier
-            )
-        )
+        maybe(token(eop_identifier))
     )(input);
 }
 
@@ -907,7 +901,7 @@ following the terminated statement.
 The typedef statement defines an alias for a type.
 */
 
-// statement = [identifier ":"] (simple_statement | assignment| construction | control_statement | typedef).
+// statement = [identifier ":"] (simple_statement | assignment | construction | control_statement | typedef).
 auto eop_statement(string_view input) -> Parsed_t<Eop>
 {
     return sequence(
@@ -1369,9 +1363,8 @@ auto eop_declaration_list(string_view input) -> Parsed_t<Eop>
         },
         repeat(
             sequence(
-                [](auto const& x, auto){ return x; },
-                token(eop_declaration),
-                eol
+                [](auto const& x){ return x; },
+                token(eop_declaration)
             )
         )
     )(input);
