@@ -225,11 +225,11 @@ Eop prune(Expression const& x, Eval& eval)
 
     for (auto const& c : x.conjunctions)
     {
-        conjunction = prune(c, eval);
+        Eop pc{prune(c, eval)};
         if (eval.boolean_literal && !*eval.boolean_literal) {
             return Eop{Boolean{false}};
         } else {
-            conjunctions.emplace_back(conjunction);
+            conjunctions.emplace_back(pc);
         }
     }
 
@@ -262,11 +262,11 @@ Eop prune(Conjunction const& x, Eval& eval)
 
     for (auto const& e : x.equalities)
     {
-        equality = prune(e, eval);
+        Eop pe{prune(e, eval)};
         if (eval.boolean_literal && *eval.boolean_literal) {
             return Eop{Boolean{true}};
         } else {
-            equalities.emplace_back(equality);
+            equalities.emplace_back(pe);
         }
     }
 
@@ -1278,7 +1278,7 @@ Eop prune(Procedure const& x, Eval& eval)
 
     return Eop{
         Procedure{
-            prune(x.type, type_eval),
+            x.type ? prune(x.type, type_eval) : x.type,
             prune(x.name, name_eval),
             prune(x.parameters, parameters_eval),
             prune(x.body, body_eval)
@@ -1513,9 +1513,9 @@ string json(Initialization const& x)
 Eop prune(Initialization const& x, Eval& eval)
 {
     if (x.expressions) {
-        return prune(*x.expressions, eval);
+        return Eop{Initialization{prune(*x.expressions, eval), {}}};
     } else {
-        return prune(*x.expression, eval);
+        return Eop{Initialization{{}, prune(*x.expression, eval)}};
     }
 }
 
